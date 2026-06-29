@@ -24,23 +24,39 @@ jobs:
 
       - name: 修复 CRLF 行尾
         run: |
-          # Fix CRLF issues for shell scripts (common issue on Windows git clients)
           sed -i 's/\r$//' gradlew
-          sed -i 's/\r$//' gradlew.bat
           chmod +x gradlew
         shell: bash
 
-      - name: 编译 Debug APK
+      - name: 编译 Debug APK (带详细日志)
+        id: build
         run: |
-          echo "=== Java Version ==="
-          java -version 2>&1
-          echo "=== Gradle Version ==="
-          ./gradlew --version 2>&1
-          echo "=== Build ==="
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1
+          set -o pipefail
+          echo "=== 1. Check gradlew ===" | tee build.log
+          file gradlew >> build.log 2>&1
+          head -1 gradlew >> build.log 2>&1
+          echo "=== 2. Java check ===" >> build.log
+          echo "JAVA_HOME=" >> build.log
+          ls -la /bin/java >> build.log 2>&1 || echo "JAVA_HOME/bin/java not found" >> build.log
+          echo "=== 3. Running gradlew --version ===" >> build.log
+          ./gradlew --version >> build.log 2>&1 || echo "GRADLEW_VERSION_EXIT_CODE=True" >> build.log
+          echo "=== 4. Running assembleDebug ===" >> build.log
+          ./gradlew assembleDebug --no-daemon --stacktrace >> build.log 2>&1
+          echo "BUILD_EXIT_CODE=True" >> build.log
+          ls -la app/build/outputs/apk/debug/ >> build.log 2>&1 || echo "APK_DIR_NOT_FOUND" >> build.log
+          cat build.log
         shell: bash
 
+      - name: 上传构建日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: warn
+
       - name: 上传 APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: 答题悬浮助手-v1.0
