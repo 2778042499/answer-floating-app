@@ -22,54 +22,28 @@ jobs:
       - name: 安装 Android SDK
         uses: android-actions/setup-android@v4.0.1
 
-      - name: 验证环境并保存日志
+      - name: 修复 CRLF 行尾
         run: |
-          set -x
-          echo "=== OS ==="
-          uname -a
-          echo "=== JAVA ==="
-          echo "JAVA_HOME="
-          which java || echo "java not found"
-          java -version 2>&1
-          ls -la /bin/java 2>&1 || echo "JAVA_HOME/bin/java not found"
-          echo "=== GRADLE WRAPPER ==="
-          chmod -v +x gradlew
-          ls -la gradlew gradle/wrapper/
-          file gradlew
-          echo "=== GRADLE WRAPPER JAR ==="
-          ls -la gradle/wrapper/gradle-wrapper.jar
-          file gradle/wrapper/gradle-wrapper.jar
-          echo "=== TRY RUNNING GRADLEW ==="
-          ./gradlew --version 2>&1
+          # Fix CRLF issues for shell scripts (common issue on Windows git clients)
+          sed -i 's/\r$//' gradlew
+          sed -i 's/\r$//' gradlew.bat
+          chmod +x gradlew
         shell: bash
-        continue-on-error: true
 
       - name: 编译 Debug APK
         run: |
-          set -x
-          dos2unix gradlew 2>/dev/null || true
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
-        shell: bash
-        continue-on-error: true
-
-      - name: 保存全部构建日志
-        if: always()
-        run: |
-          mkdir -p build-logs
-          env > build-logs/env.txt
-          find / -name "java" -type f 2>/dev/null | head -5 > build-logs/java-locations.txt
-          find / -name "gradle-wrapper.jar" 2>/dev/null | head -5 > build-logs/jar-locations.txt
-          ls -laR gradle/ > build-logs/gradle-dir.txt 2>&1 || true
+          echo "=== Java Version ==="
+          java -version 2>&1
+          echo "=== Gradle Version ==="
+          ./gradlew --version 2>&1
+          echo "=== Build ==="
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1
         shell: bash
 
-      - name: 上传日志和APK
-        if: always()
+      - name: 上传 APK
         uses: actions/upload-artifact@v4
         with:
-          name: 构建输出
-          path: |
-            app/build/outputs/apk/debug/app-debug.apk
-            build-logs/
-          if-no-files-found: warn
+          name: 答题悬浮助手-v1.0
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
           compression-level: 0
