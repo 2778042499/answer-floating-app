@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">答题悬浮助手</string>
+    <string name="accessibility_desc">检测音量键组合，触发屏幕截图和AI答题</string>
+</resources>
